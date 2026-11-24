@@ -25,3 +25,6 @@ packages = ["sudoku"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "slow: 壓力/生成迴歸測試，較耗時；CI 日常門檻以 -m 'not slow' 跑快速集",
+]

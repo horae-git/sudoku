@@ -10,7 +10,8 @@
 - **F**：雙 Difficulty enum 統一為單一定義（generator 與 solver 指向同一個類別）。
 - **G（Spec #8）**：fish 退化不誤記等級、SUBSETS獨立等級、解不開的題標記為 SWORDFISH 以上。
 - **H（Spec #3）**：主視窗固定大小不可縮放（960×780）。
-- **D**：原始碼不得混入簡體字（掃描 sudoku/ 與 tests/ 的 .py）。
+
+備註：簡體字掃描（原 D 項）已抽成獨立常駐測試 tests/test_no_simplified_chinese.py。
 """
 
 import time
@@ -91,6 +92,7 @@ def _只剩一格的局(mode: str = "easy") -> GameSession:
 # ---------- A：困難/專家開局不得崩潰（解答走計數式回溯 unique_solution） ----------
 
 
+@pytest.mark.slow
 class TestA_開局解答走回溯:
     def test_expert連續100局new_game不拋例外且解答正確(self):
         for seed in range(100):
@@ -118,6 +120,7 @@ def _str_grid(s: str):
 # ---------- B：難度分級落實技巧門檻重抽 ----------
 
 
+@pytest.mark.slow
 class TestB_門檻重抽:
     @pytest.mark.parametrize("difficulty", list(Difficulty))
     def test_各難度生成20局門檻正確且唯一解(self, difficulty):
@@ -305,26 +308,3 @@ class TestH_主視窗固定大小:
             assert not w and not h  # resizable(False, False)
         finally:
             app.destroy()
-
-
-# ---------- D：原始碼不得混入簡體字 ----------
-
-
-class TestD_無簡體字:
-    def test_sudoku與tests原始碼無簡體特有字(self):
-        # 簡體特有字（與繁體不同形者）；本測試檔自己含這些字的字面，掃描時排除自己
-        # 簡體特有字（與繁體不同形者；注意「折類」等繁簡共用字不算）
-        簡體字 = set("门显们计题这为过还发说语话读写书见观视问间闻达运远连进边没对会数学应试设请让么后双关开时单变实历紧虑悬恳恶恸愿慑懒戏战户扑执扩扫扬扰报担拟拢拣拥拦挡挥挠挣挤捞损换据掳掸掷赏贼贾债赁赚赌赎赐赠赡赢赞车轴轮软较载辆轻辅输辖辈辉辊辑辐边贝负贵买卖质贰贱贴费贺货饰饱饲验类")
-        根 = Path(__file__).resolve().parent.parent
-        壞字 = []
-        for 資料夾 in (根 / "sudoku", 根 / "tests"):
-            for py in 資料夾.rglob("*.py"):
-                if py.name == Path(__file__).name and py.parent == 根 / "tests":
-                    continue  # 排除本測試檔（字面含簡體字）
-                if "__pycache__" in py.parts:
-                    continue
-                for 行號, 行 in enumerate(py.read_text(encoding="utf-8").splitlines(), 1):
-                    for ch in 行:
-                        if ch in 簡體字:
-                            壞字.append(f"{py.relative_to(根)}:{行號}: {ch}")
-        assert not 壞字, "發現簡體字：\n" + "\n".join(壞字)

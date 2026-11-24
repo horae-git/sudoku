@@ -8,7 +8,7 @@
 
 ## Solution
 
-以 customtkinter 打造的單一視窗（固定 960×760）桌面 app：左側置中 9×9 棋盤，右側資訊面板（計時/錯誤/提示次數/操作按鈕）。核心為模組化的 `sudoku` Python package（純邏輯、可測試），UI 層只負責繪製與事件轉發。資料以 JSON 原子寫入使用者資料目錄，達成自動存檔與歷史統計。
+以 customtkinter 打造的單一視窗（固定 960×780）桌面 app：左側置中 9×9 棋盤，右側資訊面板（計時/錯誤/提示次數/操作按鈕）。核心為模組化的 `sudoku` Python package（純邏輯、可測試），UI 層只負責繪製與事件轉發。資料以 JSON 原子寫入使用者資料目錄，達成自動存檔與歷史統計。
 
 ## User Stories
 
@@ -61,7 +61,7 @@
 
 ## Implementation Decisions
 
-- **UI 框架**：customtkinter（扁平現代、原生圓角、深淺色模式），單一固定視窗 960×760，棋盤置中、右側資訊面板。
+- **UI 框架**：customtkinter（扁平現代、原生圓角、深淺色模式），單一固定視窗 960×780，棋盤置中、右側資訊面板。
 - **專案結構**：`pyproject.toml` + `sudoku/` package，模組為 `generator`、`solver`（含技巧鏈）、`session`（對局狀態機）、`storage`、`themes`，`ui/` 放各畫面，`main.py` 進入點；環境與依賴由 uv 管理。
 - **題目生成**：完整解 via 亂數洗牌 + 回溯；挖空時以 MRV（最小剩餘值）啟發 + 回溯檢查，保證唯一解，大幅縮短生成時間。
 - **難度分級**：技巧鏈求解器由簡到難嘗試（naked/hidden singles → naked/hidden pairs → locked candidates → X-wing → swordfish …），難度 = 解題所需最難技巧等級為主、挖空數為輔的門檻表；生成時對不符門檻者重抽。
@@ -72,8 +72,9 @@
 - **復原**：完整動作堆疊（含提示填入），可一路回開局。
 - **暫停**：棋盤覆半透明遮罩 + 置中「⏸ 已暫停」，計時暫停。
 - **存檔**：每次動作 + 每秒 tick 觸發，原子寫入（tmp + rename）；每個模式（簡單/中等/困難/專家/每日挑戰）各保留一份進行中存檔；放棄的局清掉存檔但留歷史紀錄。
-- **資料儲存**：使用者資料目錄（`~/.local/share/sudoku/`）下的 JSON（save / history / stats）。
-- **主題**：3 套色票（淺色 / 深色 / 馬卡龍），深色套自動加粗九宮格粗線；首頁 🎨 显眼切換、即時套用。
+- **資料儲存**：使用者資料目錄下的 JSON（save / history / stats）。SPEC 原話 `~/.local/share/sudoku/` 僅為舉例——實際為跨平台行為：macOS 走 `~/Library/Application Support/sudoku`，Linux 走 `$XDG_DATA_HOME/sudoku` 或 `~/.local/share/sudoku`，Windows 走 `%APPDATA%\sudoku`；可用環境變數 `SUDOKU_DATA_DIR` 覆蓋。
+- **歷史篩選**：難度 + 結果（完成/放棄）兩個篩選；另外保留「每日挑戰」選項（daily 是歷史裡的實際類別，篩 mode == "daily"）。
+- **主題**：3 套色票（淺色 / 深色 / 馬卡龍），深色套自動加粗九宮格粗線；首頁 🎨 置於顯眼處切換、即時套用。
 - **歷史篩選**：難度 + 結果（完成/放棄）兩個篩選。
 - **勝利畫面**：獨立置中 modal，內含用時/錯誤/難度，底部明確按鈕列（返回首頁 / 再來一局），不被棋盤遮擋。
 - **鍵盤**：方向鍵移動、1–9 填入、Delete/Backspace 清除、N 筆記、Ctrl+Z 復原、Esc 暫停；全鍵盤可完成一局。

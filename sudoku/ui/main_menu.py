@@ -103,9 +103,15 @@ class MainMenu(ctk.CTkFrame):
     # ---------- 開新局 / 繼續遊戲 ----------
 
     def _open_board(self, session: GameSession) -> None:
-        """依 session 切換到棋盤畫面（標籤：每日挑戰顯示「📅 本日題目（日期）」）。"""
+        """依 session 切換到棋盤畫面（標籤：每日挑戰顯示「📅 本日題目（日期）」）。
+
+        勝利 modal 的「🔁 再來一局」會以 ``on_play_again`` 交回此處開同模式新局。
+        """
         label = mode_display_label(session.mode, session.date)
-        view = BoardView(self.master_app, session, mode_label=label, on_home=self._back_to_menu)
+        view = BoardView(
+            self.master_app, session, mode_label=label,
+            on_home=self._back_to_menu, on_play_again=self._play_again,
+        )
         self._show(view)
 
     def _start_difficulty(self, mode_str: str) -> None:
@@ -113,6 +119,11 @@ class MainMenu(ctk.CTkFrame):
 
     def _start_daily(self) -> None:
         self._open_board(GameSession.daily(date.today()))
+
+    def _play_again(self, mode: str, date_str: str | None) -> None:
+        """勝利 modal 按「🔁 再來一局」：同模式（同難度 / 每日挑戰同日期）開新局。"""
+        session = GameSession.daily(date_str) if mode == "daily" and date_str else GameSession.new_game(mode)
+        self._open_board(session)
 
     def _continue(self, mode: str) -> None:
         """由存檔續玩；讀不到（已結束 / 損毀）時重建主選單。"""

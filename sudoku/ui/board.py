@@ -10,10 +10,14 @@
 - 滑鼠點右側 1–9 九宮格按鈕填入；填錯立即紅色顯示並計次；提示填入綠色鎖定；
 - 筆記模式（📝 按鈕或 N 鍵）下數字鍵記 3×3 候選小字，填對自動清同單元筆記；
 - 鍵盤：方向鍵移動、1–9 填入/筆記、Delete/Backspace 清除、Ctrl+Z 復原、Esc 暫停；
-- 計時器每秒 ``flow.tick()``（暫停與完成時停止），完成即停止並寫入歷史。
+- 計時器每秒 ``flow.tick()``（暫停與完成時停止），完成即停止並寫入歷史；
+- 勝利（``session.is_won()``）時彈出**獨立置中 modal**（``VictoryModal``，CTkToplevel +
+  ``grab_set`` 唯一焦點，絕不疊在棋盤格子上）：大標題「🎉 恭喜完成！」、本局用時 /
+  錯誤次數 / 難度標籤（每日挑戰局額外標本日題目、零錯誤時標「✨ 零錯誤！」），
+  底部一排完整可見的圓角按鈕「🏠 返回首頁」「🔁 再來一局」。
 
-純邏輯（格子外觀決策、高亮集合、筆記排版、時間格式化、遮罩旗標、模式標籤）
-抽成 module-level 函式，供 pytest 在 headless 測試。
+純邏輯（格子外觀決策、高亮集合、筆記排版、時間格式化、遮罩旗標、模式標籤、
+勝利內容摘要 ``victory_summary``）抽成 module-level 函式，供 pytest 在 headless 測試。
 """
 
 import customtkinter as ctk
@@ -137,10 +141,149 @@ def mode_display_label(mode: str, date: str | None = None) -> str:
     return labels.get(mode, mode)
 
 
+def victory_summary(session: GameSession, mode: str | None = None) -> dict:
+    """勝利 modal 的顯示內容（純邏輯，供 UI 繪製與測試）。
+
+    回傳 dict：
+
+    - ``title``：大標題「🎉 恭喜完成！」；
+    - ``lines``：``[(標籤, 內容), ...]`` 列表——本局用時（``format_mmss``）、
+      錯誤次數、難度標籤、每日挑戰局額外一行「每日挑戰：📅 本日題目（日期）」、
+      零錯誤時特別標「✨ 零錯誤！」（對應生涯統計的零錯誤次數）；
+    - ``time`` / ``mistakes`` / ``difficulty_label`` / ``daily_note`` / ``zero_error``：
+      上述欄位的原始值。
+
+    ``mode`` 省略時用 ``session.mode``；每日挑戰等 ``mode == "daily"`` 時難度標籤為
+    「📅 本日題目（日期）」（無日期則「📅 每日挑戰」）。
+    """
+    mode = mode if mode is not None else session.mode
+    daily_note = None
+    if mode == "daily":
+        daily_note = mode_display_label("daily", session.date)
+        difficulty_label = daily_note
+    else:
+        difficulty_label = mode_display_label(mode)
+    lines: list[tuple[str, str]] = [
+        ("本局用時", format_mmss(session.elapsed_sec)),
+        ("錯誤次數", f"{session.mistakes} 次"),
+        ("難度", difficulty_label),
+    ]
+    if mode == "daily":
+        lines.append(("每日挑戰", daily_note or "📅 每日挑戰"))
+    if session.mistakes == 0:
+        lines.append(("成就", "✨ 零錯誤！"))
+    return {
+        "title": "🎉 恭喜完成！",
+        "lines": lines,
+        "time": format_mmss(session.elapsed_sec),
+        "mistakes": session.mistakes,
+        "difficulty_label": difficulty_label,
+        "daily_note": daily_note,
+        "zero_error": session.mistakes == 0,
+    }
+
+
+class VictoryModal(ctk.CTkToplevel):
+    """勝利 modal：獨立置中視窗（CTkToplevel + ``grab_set`` 唯一焦點，不疊在棋盤格子上）。
+
+    內容為 ``victory_summary``：大標題「🎉 恭喜完成！」、本局用時 / 錯誤次數 / 難度標籤
+    （每日挑戰局額外顯示「📅 本日題目（日期）」、零錯誤時標「✨ 零錯誤！」）；
+    底部一排完整可見、不被任何東西遮擋的圓角按鈕「🏠 返回首頁」「🔁 再來一局」。
+    """
+
+    寬 = 460
+    高 = 420
+
+    def __init__(
+        self,
+        master: ctk.CTk,
+        session: GameSession,
+        mode: str,
+        on_home=None,
+        on_play_again=None,
+        **kwargs,
+    ) -> None:
+        super().__init__(master, fg_color=get_current_theme().背景, **kwargs)
+        self.session = session
+        self.mode = mode
+        self._on_home = on_home
+        self._on_play_again = on_play_again
+        self.theme = get_current_theme()
+        self.title("🎉")
+        self.resizable(False, False)
+        self.transient(master)  # 跟隨主視窗
+
+        sm = victory_summary(session, mode)
+        內容 = ctk.CTkFrame(self, fg_color=self.theme.面板, corner_radius=self.theme.圓角)
+        內容.pack(expand=True, fill="both", padx=14, pady=14)
+
+        ctk.CTkLabel(
+            內容, text=sm["title"], font=ctk.CTkFont(size=34, weight="bold"),
+            text_color=self.theme.標題文字,
+        ).pack(pady=(22, 6))
+        for 標籤, 值 in sm["lines"]:
+            列 = ctk.CTkFrame(內容, fg_color="transparent")
+            列.pack(fill="x", padx=36, pady=3)
+            ctk.CTkLabel(列, text=標籤, font=ctk.CTkFont(size=15),
+                         text_color=self.theme.文字).pack(side="left")
+            ctk.CTkLabel(列, text=值, font=ctk.CTkFont(size=17, weight="bold"),
+                         text_color=self.theme.標題文字).pack(side="right")
+
+        # 底部按鈕列：一排兩個圓角按鈕，pack 在最下方，保證完整可見、不被棋盤遮擋
+        按鈕列 = ctk.CTkFrame(self, fg_color="transparent")
+        按鈕列.pack(side="bottom", fill="x", padx=14, pady=(0, 14))
+
+        def 大按鈕(text: str, command) -> ctk.CTkButton:
+            return ctk.CTkButton(
+                按鈕列, text=text, width=180, height=48, corner_radius=24,
+                font=ctk.CTkFont(size=16, weight="bold"),
+                fg_color=self.theme.按鈕, hover_color=self.theme.按鈕懸停,
+                text_color=self.theme.按鈕文字,
+                command=command,
+            )
+
+        self.home_button = 大按鈕("🏠 返回首頁", self._go_home)
+        self.home_button.pack(side="left", expand=True, fill="x", padx=(0, 6))
+        self.again_button = 大按鈕("🔁 再來一局", self._play_again)
+        self.again_button.pack(side="right", expand=True, fill="x", padx=(6, 0))
+
+        # 置中於主視窗中央，並設為唯一焦點（modal 期間主視窗不可操作）
+        self.update_idletasks()
+        root = self.master
+        root.update_idletasks()
+        x = root.winfo_rootx() + (root.winfo_width() - self.寬) // 2
+        y = root.winfo_rooty() + (root.winfo_height() - self.高) // 2
+        self.geometry(f"{self.寬}x{self.高}+{max(x, 0)}+{max(y, 0)}")
+        self.grab_set()
+        self.focus_set()
+        self.protocol("WM_DELETE_WINDOW", self._go_home)
+        self.bind("<Escape>", lambda e: self._go_home())
+
+    def _關閉(self) -> None:
+        """關閉 modal：釋放 grab、銷毀視窗。"""
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+        self.destroy()
+
+    def _go_home(self) -> None:
+        self._關閉()
+        if self._on_home is not None:
+            self._on_home()
+
+    def _play_again(self) -> None:
+        date = self.session.date
+        self._關閉()
+        if self._on_play_again is not None:
+            self._on_play_again(self.mode, date)
+
+
 class BoardView(ctk.CTkFrame):
     """棋盤畫面：Canvas 棋盤（+暫停遮罩）+ 數字鍵盤 + 資訊面板 + 按鈕列。
 
-    由 ``GameSession`` 驅動資料面、``GameFlow`` 處理自動存檔與勝利 / 放棄結算。
+    由 ``GameSession`` 驅動資料面、``GameFlow`` 處理自動存檔與勝利 / 放棄結算；
+    勝利時彈出獨立置中 modal（``victory_modal``）。
     """
 
     def __init__(
@@ -149,6 +292,7 @@ class BoardView(ctk.CTkFrame):
         session: GameSession,
         mode_label: str = "",
         on_home=None,
+        on_play_again=None,
         **kwargs,
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
@@ -156,7 +300,9 @@ class BoardView(ctk.CTkFrame):
         self.session = session
         self.flow = GameFlow(session)  # 建構即自動存檔
         self._on_home = on_home
+        self._on_play_again = on_play_again
         self._timer_id: str | None = None
+        self.victory_modal: VictoryModal | None = None
 
         # ---------- 左側：棋盤 ----------
         board_wrap = ctk.CTkFrame(self, fg_color=self.theme.格線, corner_radius=self.theme.圓角)
@@ -398,11 +544,27 @@ class BoardView(ctk.CTkFrame):
         return "break"
 
     def _after_action(self) -> None:
-        """動作後：重繪棋盤、更新面板（計時/錯誤/提示/筆記按鈕狀態）。"""
+        """動作後：重繪棋盤、更新面板（計時/錯誤/提示/筆記按鈕狀態）；勝利則彈 modal。"""
         if self.session.is_won():
-            self._stop_timer()
+            self._stop_timer()  # 勝利時計時停止（modal 期間 tick 也不會再跑）
+            self._redraw_cells()
+            self._refresh_panel()
+            self._show_victory_modal()
+            return
         self._redraw_cells()
         self._refresh_panel()
+
+    def _show_victory_modal(self) -> None:
+        """勝利時彈出獨立置中 modal（只彈一次；flow 已負責 finish 與刪存檔）。"""
+        if self.victory_modal is not None:
+            return
+        self.victory_modal = VictoryModal(
+            self.winfo_toplevel(),
+            self.session,
+            self.session.mode,
+            on_home=self._go_home,
+            on_play_again=self._on_play_again,
+        )
 
     def _refresh_panel(self) -> None:
         """依 session 狀態更新資訊面板與按鈕文字（計時 mm:ss / 錯誤 / 剩餘提示 / 筆記模式 / 暫停）。"""
@@ -415,9 +577,17 @@ class BoardView(ctk.CTkFrame):
             self.note_btn.configure(text="📝 筆記", fg_color=self.theme.按鈕)
         self.pause_btn.configure(text="▶ 繼續" if self.session.is_paused else "⏸ 暫停")
 
+    def _on_play_again(self, mode: str, date: str | None) -> None:
+        """「🔁 再來一局」：由 modal 關閉後呼叫，交給外層（主選單）開同模式新局。"""
+        if self._on_play_again is not None:
+            self._on_play_again(mode, date)
+
     def _go_home(self) -> None:
-        """放棄本局（寫歷史為放棄、刪存檔）後回主選單。"""
+        """回主選單：勝利局不記放棄（flow 已 finish("completed")）；未勝利則記放棄。"""
         self._stop_timer()
+        if self.victory_modal is not None and self.victory_modal.winfo_exists():
+            self.victory_modal._關閉()
+            self.victory_modal = None
         if not self.session.is_won():
             self.flow.abandon()
         root = self.winfo_toplevel()

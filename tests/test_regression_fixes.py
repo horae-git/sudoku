@@ -9,7 +9,7 @@
 - **C（Spec #2）**：提示填滿最後一格要結算勝利（寫歷史、刪存檔、停計時）。
 - **F**：雙 Difficulty enum 統一為單一定義（generator 與 solver 指向同一個類別）。
 - **G（Spec #8）**：fish 退化不誤記等級、SUBSETS獨立等級、解不開的題標記為 SWORDFISH 以上。
-- **H（Spec #3）**：主視窗固定大小不可縮放（960×760）。
+- **H（Spec #3）**：主視窗固定大小不可縮放（960×780）。
 - **D**：原始碼不得混入簡體字（掃描 sudoku/ 與 tests/ 的 .py）。
 """
 
@@ -294,9 +294,10 @@ SUBSETS題 = "940800720000020600052000008000700040075080300064000800600100580007
 
 
 class TestH_主視窗固定大小:
-    def test_build_app固定960x760且不可縮放(self):
-        from sudoku.main import build_app
+    def test_build_app固定960x780且不可縮放(self):
+        from sudoku.main import build_app, 視窗寬, 視窗高
 
+        assert (視窗寬, 視窗高) == (960, 780)
         app = build_app()
         try:
             assert app.winfo_width() in (1, 960) or True  # 寬度在 map 前可能尚未生效

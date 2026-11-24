@@ -8,7 +8,7 @@
 
 ## Solution
 
-以 customtkinter 打造的單一視窗（固定 960×760）桌面 app：左側置中 9×9 棋盤，右側資訊面板（計時/錯誤/提示次數/操作按鈕）。核心為模組化的 `sudoku` Python package（純邏輯、可測試），UI 層只負責繪製與事件轉發。資料以 JSON 原子寫入使用者資料目錄，達成自動存檔與歷史統計。
+以 customtkinter 打造的單一視窗（固定 960×780）桌面 app：左側置中 9×9 棋盤，右側資訊面板（計時/錯誤/提示次數/操作按鈕）。核心為模組化的 `sudoku` Python package（純邏輯、可測試），UI 層只負責繪製與事件轉發。資料以 JSON 原子寫入使用者資料目錄，達成自動存檔與歷史統計。
 
 ## User Stories
 
@@ -61,7 +61,7 @@
 
 ## Implementation Decisions
 
-- **UI 框架**：customtkinter（扁平現代、原生圓角、深淺色模式），單一固定視窗 960×760，棋盤置中、右側資訊面板。
+- **UI 框架**：customtkinter（扁平現代、原生圓角、深淺色模式），單一固定視窗 960×780，棋盤置中、右側資訊面板。
 - **專案結構**：`pyproject.toml` + `sudoku/` package，模組為 `generator`、`solver`（含技巧鏈）、`session`（對局狀態機）、`storage`、`themes`，`ui/` 放各畫面，`main.py` 進入點；環境與依賴由 uv 管理。
 - **題目生成**：完整解 via 亂數洗牌 + 回溯；挖空時以 MRV（最小剩餘值）啟發 + 回溯檢查，保證唯一解，大幅縮短生成時間。
 - **難度分級**：技巧鏈求解器由簡到難嘗試（naked/hidden singles → naked/hidden pairs → locked candidates → X-wing → swordfish …），難度 = 解題所需最難技巧等級為主、挖空數為輔的門檻表；生成時對不符門檻者重抽。

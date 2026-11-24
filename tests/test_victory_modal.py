@@ -115,7 +115,7 @@ def app_root():
     import customtkinter as ctk
 
     root = ctk.CTk()
-    root.geometry("960x760")
+    root.geometry("960x780")
     root.update_idletasks()
     root.update()
     yield root

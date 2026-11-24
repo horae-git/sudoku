@@ -6,7 +6,7 @@ from sudoku.themes import get_current_theme
 from sudoku.ui.main_menu import MainMenu
 
 視窗寬 = 960
-視窗高 = 760
+視窗高 = 780
 
 
 def apply_theme(app: ctk.CTk) -> None:
@@ -15,7 +15,7 @@ def apply_theme(app: ctk.CTk) -> None:
 
 
 def build_app() -> ctk.CTk:
-    """建立主視窗（固定 960×760、不可縮放，SPEC.md 第 64 行）並套上目前背景主題。"""
+    """建立主視窗（固定 960×780、不可縮放，SPEC.md 第 64 行）並套上目前背景主題。"""
     ctk.set_appearance_mode("system")
     ctk.set_default_color_theme("blue")
 
@@ -23,7 +23,7 @@ def build_app() -> ctk.CTk:
     apply_theme(app)  # 重開 app 記得上次主題
     app.title("數獨")
     app.geometry(f"{視窗寬}x{視窗高}")
-    app.resizable(False, False)  # 固定大小（SPEC：單一固定視窗 960×760）
+    app.resizable(False, False)  # 固定大小（SPEC：單一固定視窗 960×780）
     return app
 
 

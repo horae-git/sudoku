@@ -69,7 +69,7 @@ class Test畫面建構:
         import customtkinter as ctk
 
         app = ctk.CTk()
-        app.geometry("960x760")
+        app.geometry("960x780")
         yield app
         app.destroy()
 
@@ -146,7 +146,7 @@ class Test主選單接到三個新畫面:
 
         monkeypatch.setenv("SUDOKU_DATA_DIR", str(tmp_path / "user-data"))
         app = ctk.CTk()
-        app.geometry("960x760")
+        app.geometry("960x780")
         yield app
         app.destroy()
 

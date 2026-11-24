@@ -53,9 +53,9 @@ from datetime import date as _date
 from typing import Any, Iterable
 
 from sudoku import storage
-from sudoku.generator import Difficulty, daily_challenge, generate_puzzle
+from sudoku.generator import daily_challenge, generate_puzzle
 from sudoku.model import Puzzle, Solution
-from sudoku.solver import solve
+from sudoku.solver import Difficulty, unique_solution
 
 # 每局提示次數上限
 HINTS_PER_GAME = 3
@@ -145,19 +145,21 @@ class GameSession:
         if isinstance(difficulty, Difficulty):
             diff = difficulty
         elif isinstance(difficulty, str):
-            try:
-                diff = Difficulty(difficulty)
-            except ValueError:
+            diff = next((d for d in Difficulty if d.name.lower() == difficulty.lower()), None)
+            if diff is None:
                 raise ValueError(
-                    f"未知難度：{difficulty!r}（合法：{', '.join(d.value for d in Difficulty)}）"
+                    f"未知難度：{difficulty!r}（合法：{', '.join(d.name.lower() for d in Difficulty)}）"
                 ) from None
         else:
             raise TypeError(f"difficulty 必須是 Difficulty 或字串：{difficulty!r}")
         puzzle = generate_puzzle(diff, seed=seed)
-        solution = solve(puzzle).solution
-        if solution is None:  # pragma: no cover - 生成器保證唯一解
-            raise RuntimeError("題目無解（理論上不應發生）")
-        return cls(puzzle, solution, mode=diff.value, difficulty=diff.value, date=None)
+        # 解答一律用計數式回溯（上限 2）的 unique_solution 求唯一解；
+        # 技巧鏈 solve 只到 swordfish，解不開的唯一解題會 solved=False，不能當解答來源
+        try:
+            solution = unique_solution(puzzle)
+        except ValueError as exc:  # pragma: no cover - 生成器保證唯一解
+            raise RuntimeError(f"生成的題目沒有唯一解（理論上不應發生）：{exc}") from exc
+        return cls(puzzle, solution, mode=diff.name.lower(), difficulty=diff.name.lower(), date=None)
 
     @classmethod
     def daily(cls, d: str | _date) -> "GameSession":
@@ -172,14 +174,16 @@ class GameSession:
         else:
             raise TypeError(f"日期必須是字串或 datetime.date：{d!r}")
         puzzle = daily_challenge(date_str)  # 內部驗證日期合法性，非法時拋 ValueError
-        solution = solve(puzzle).solution
-        if solution is None:  # pragma: no cover
-            raise RuntimeError("每日挑戰題目無解（理論上不應發生）")
+        # 解答同樣走計數式回溯 unique_solution（技巧鏈解不開的題也能開局）
+        try:
+            solution = unique_solution(puzzle)
+        except ValueError as exc:  # pragma: no cover - 生成器保證唯一解
+            raise RuntimeError(f"每日挑戰題目沒有唯一解（理論上不應發生）：{exc}") from exc
         return cls(puzzle, solution, mode="daily", difficulty="medium", date=date_str)
 
     @classmethod
     def from_save(cls, state_dict: dict, mode: str) -> "GameSession":
-        """由存檔續玩；``mode`` 显式指定（對應 storage 各模式存檔）。"""
+        """由存檔續玩；``mode`` 為顯式指定（對應 storage 各模式存檔）。"""
         return cls.from_state_dict(state_dict, mode=mode)
 
     @classmethod
@@ -188,7 +192,8 @@ class GameSession:
 
         必要欄位（storage schema）：``puzzle`` / ``solution`` / ``board``（81 字元數字字串）、
         ``notes``（81 個 list）、``mistakes`` / ``hints_left`` / ``elapsed_sec``。
-        缺漏或格式錯誤時拋出 ValueError。續玩後 undo 堆疊為空（存檔不保存堆疊）。
+        缺漏或格式錯誤時拋出 ValueError。續玩後 undo 堆疊為空（存檔不保存堆疊，
+        見 GLOSSARY 已知限制：續玩的局無法一路復原回開局）。
         """
         if not isinstance(state_dict, dict):
             raise TypeError("state_dict 必須是 dict")

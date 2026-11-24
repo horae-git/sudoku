@@ -611,7 +611,7 @@ class BoardView(ctk.CTkFrame):
             self._timer_id = None
 
     def _tick(self) -> None:
-        """每秒：flow.tick() 计時並自動存檔（暫停時不計）；完成後停止計時器。"""
+        """每秒：flow.tick() 計時並自動存檔（暫停時不計）；完成後停止計時器。"""
         if self.session.is_won():
             self._refresh_panel()
             self._stop_timer()

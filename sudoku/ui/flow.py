@@ -69,7 +69,8 @@ class GameFlow:
     def hint(self) -> tuple[int, int, int] | None:
         res = self.session.hint()
         if res is not None:
-            _存檔(self.session)
+            # 提示填入最後一格也要走勝利結算（finish + 刪存檔 + 停計時）
+            self._動作後()
         return res
 
     def _動作後(self) -> None:

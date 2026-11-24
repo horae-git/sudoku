@@ -95,12 +95,13 @@ class TestSolveTechniqueChain:
             (FISH題_B, FISH題_B_解),
         ],
     )
-    def test_需_pair或locked_candidates_的題可解開且最難技巧不超過_locked(self, 題目, 該題解答):
+    def test_需_pair到subset_的題可解開且最難技巧不超過_subsets(self, 題目, 該題解答):
         result = solve(_puzzle(題目))
         assert result.solved is True
         assert result.solution == _solution(該題解答)
         assert result.max_technique is not None
-        assert Technique.SINGLE_HIDDEN < result.max_technique <= Technique.LOCKED_CANDIDATES
+        # pair/locked 為 MEDIUM；triple/quad 現在是獨立的 SUBSETS 等級（排序在 LOCKED 之後）
+        assert Technique.SINGLE_HIDDEN < result.max_technique <= Technique.SUBSETS
 
     def test_需_xwing_的題可用_xwing_解開(self):
         result = solve(_puzzle(HARD_XWING題))
@@ -138,6 +139,7 @@ class TestDifficulty:
             < Technique.PAIR_NAKED
             < Technique.PAIR_HIDDEN
             < Technique.LOCKED_CANDIDATES
+            < Technique.SUBSETS
             < Technique.X_WING
             < Technique.SWORDFISH
         )
@@ -152,7 +154,7 @@ class TestDifficulty:
         門檻 = {t.difficulty: t for t in DIFFICULTY_THRESHOLDS}
         assert 門檻[Difficulty.EASY].max_technique <= Technique.SINGLE_HIDDEN
         assert 門檻[Difficulty.MEDIUM].max_technique <= Technique.LOCKED_CANDIDATES
-        assert 門檻[Difficulty.HARD].max_technique == Technique.X_WING
+        assert 門檻[Difficulty.HARD].max_technique == Technique.X_WING  # 含 SUBSETS（排序在 X_WING 前）
         assert 門檻[Difficulty.EXPERT].max_technique == Technique.SWORDFISH
 
     @pytest.mark.parametrize(
@@ -189,8 +191,9 @@ class TestDifficultyOf:
         "題目,預期難度,預期最大技巧上限",
         [
             (MEDIUM_LOCKED題, Difficulty.MEDIUM, Technique.LOCKED_CANDIDATES),
-            (MEDIUM_HIDDENPAIR題, Difficulty.MEDIUM, Technique.LOCKED_CANDIDATES),
-            (FISH題_B, Difficulty.MEDIUM, Technique.LOCKED_CANDIDATES),
+            # hidden pair 之上的 triple/quad 現為 SUBSETS 等級（> LOCKED）→ 基準落 HARD
+            (MEDIUM_HIDDENPAIR題, Difficulty.HARD, Technique.SUBSETS),
+            (FISH題_B, Difficulty.HARD, Technique.SUBSETS),
             (HARD_XWING題, Difficulty.HARD, Technique.X_WING),
             (EXPERT_SWORDFISH題, Difficulty.EXPERT, Technique.SWORDFISH),
         ],
@@ -211,8 +214,9 @@ class TestDifficultyOf:
         assert isinstance(max_technique, Technique)
         assert clues_removed == 51
 
-    def test_無法解開的題歸為專家難度(self):
+    def test_無法解開的題歸為專家難度且標記SWORDFISH以上(self):
         report = difficulty_of(Puzzle.from_grid(無解題))
         assert report.difficulty == Difficulty.EXPERT
         assert report.solved is False
-        assert report.max_technique is None
+        # 技巧鏈解不開：max_technique 記為 SWORDFISH（超出現有技巧鏈的標記），仍歸 EXPERT
+        assert report.max_technique is not None and report.max_technique >= Technique.SWORDFISH

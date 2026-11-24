@@ -128,13 +128,13 @@ class Test畫面建構:
         storage.record_daily_win("2026-11-25")
         view = StatsView(app, on_home=lambda: None)
         view.pack(expand=True, fill="both")
-        文字们 = self._all_texts(view)
-        joined = "\n".join(文字们)
+        文字們 = self._all_texts(view)
+        joined = "\n".join(文字們)
         assert "生涯總覽" in joined
-        assert "困難" in joined and "08:20" in joined and "1" in 文字们  # 最佳時間 + 零錯誤次數
+        assert "困難" in joined and "08:20" in joined and "1" in 文字們  # 最佳時間 + 零錯誤次數
         assert "連續完成 2 天" in joined and "累計完成 2 天" in joined
         # 無紀錄的難度顯示「—」
-        assert "—" in 文字们
+        assert "—" in 文字們
 
 
 class Test主選單接到三個新畫面:

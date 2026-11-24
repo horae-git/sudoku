@@ -1,12 +1,6 @@
-"""棋盤畫面的局部對局狀態（票券 06 暫用；07 會改接 sudoku.session.GameSession）。
+"""已由票券 07 棄用的 BoardState（舊 BoardView 局部狀態），僅供舊測試參考；正式程式不再使用。
 
-純邏輯、不依賴 customtkinter，可在 headless 環境以 pytest 測試：
-
-- ``BoardState(puzzle, solution)``：持有題目、解答與玩家目前的棋盤（9×9 list）。
-- 選取 / 高亮集合（同行列宮、相同數字）、填入（判斷對錯、立即標紅並計次）、
-  清除（題示數不可清）、方向鍵移動、完成偵測。
-
-UI（board.py）只負責繪製與事件轉發，所有判定都在本類別。
+純邏輯、不依賴 customtkinter，可在 headless 環境以 pytest 測試。
 """
 
 from sudoku.model import Puzzle, Solution

@@ -10,7 +10,7 @@ import pytest
 
 from sudoku.generator import Difficulty, daily_challenge, generate_puzzle
 from sudoku.model import Puzzle, Solution
-from sudoku.ui.board_state import BoardState, unique_solution
+from tests._board_state_legacy import BoardState, unique_solution
 
 # 經典題目（固定種子，測試資料穩定）
 _PUZZLE_GRID = [

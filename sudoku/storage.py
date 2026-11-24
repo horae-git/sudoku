@@ -273,3 +273,25 @@ def record_daily_win(d: str, _統計: dict | None = None) -> dict:
     if 自己寫檔:
         _寫統計(統計)
     return 統計
+
+
+# ---------- 小設定檔（settings.json） ----------
+# 與存檔 / 歷史 / 統計分開存的簡易 key-value 設定（票券 09 用來記目前背景主題）。
+
+
+def get_settings() -> dict:
+    """讀取全部設定（settings.json）；不存在或損毀時回傳空 dict（唯讀不建檔）。"""
+    設定 = _讀取JSON(data_dir() / "settings.json", {})
+    return 設定 if isinstance(設定, dict) else {}
+
+
+def get_setting(key: str, default=None):
+    """讀取單一設定值；不存在時回傳 ``default``。"""
+    return get_settings().get(key, default)
+
+
+def set_setting(key: str, value) -> None:
+    """寫入單一設定值（原子寫入 settings.json），覆寫同 key 只留最新。"""
+    設定 = get_settings()
+    設定[key] = value
+    _原子寫入JSON(data_dir() / "settings.json", 設定)

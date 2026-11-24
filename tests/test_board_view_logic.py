@@ -9,10 +9,12 @@ import customtkinter 在 headless 下即可成功，只有建立視窗才需要�
 """
 
 from sudoku.session import GameSession
-from sudoku.themes import LIGHT
+from sudoku.themes import DARK, LIGHT, MACARON
 from sudoku.ui.board import (
+    THIN,
     cell_style,
     format_mmss,
+    grid_line_spec,
     mode_display_label,
     notes_layout,
     pause_overlay_visible,
@@ -172,3 +174,30 @@ def test_mode_display_label() -> None:
     assert mode_display_label("expert") == "專家"
     assert mode_display_label("daily", "2026-11-25") == "📅 本日題目（2026-11-25）"
     assert mode_display_label("daily") == "📅 每日挑戰"
+
+
+def test_grid_line_spec_宮線與細線() -> None:
+    """票券 09：第 0/3/6/9 條為宮粗線（宮粗線色 + 宮粗線寬），其餘為細線。"""
+    for theme in (LIGHT, DARK, MACARON):
+        for i in range(10):
+            color, w = grid_line_spec(theme, i)
+            if i % 3 == 0:
+                assert (color, w) == (theme.宮粗線, theme.宮粗線寬)
+            else:
+                assert (color, w) == (theme.格線, THIN)
+
+
+def test_grid_line_spec_深色宮粗線比其他主題更粗更亮() -> None:
+    """票券 09 驗收：深色主題下 3×3 宮粗線明顯加粗（線寬與亮度都加強）。"""
+    _, dark_w = grid_line_spec(DARK, 0)
+    _, light_w = grid_line_spec(LIGHT, 0)
+    _, macaron_w = grid_line_spec(MACARON, 0)
+    assert dark_w > light_w and dark_w > macaron_w
+
+    def 亮度(c: str) -> float:
+        return 0.2126 * int(c[1:3], 16) + 0.7152 * int(c[3:5], 16) + 0.0722 * int(c[5:7], 16)
+
+    dark_color, _ = grid_line_spec(DARK, 0)
+    assert 亮度(dark_color) > 亮度(LIGHT.宮粗線)
+    assert 亮度(dark_color) > 亮度(DARK.格線)
+    assert 亮度(dark_color) > 亮度(DARK.背景)

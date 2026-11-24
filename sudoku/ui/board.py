@@ -32,6 +32,16 @@ NOTE_CELL = CELL / 3  # 筆記 3×3 小格邊長
 遮罩網點 = "gray50"
 
 
+def grid_line_spec(theme: Theme, index: int) -> tuple[str, int]:
+    """第 ``index`` 條格線（0–10）的 (顏色, 線寬)：每 3 格的宮線用宮粗線色與宮粗線寬。
+
+    深色主題的 ``宮粗線寬`` 較大、顏色較亮，宮分隔在深色下特別明顯（票券 09）。
+    """
+    if index % 3 == 0:
+        return theme.宮粗線, theme.宮粗線寬
+    return theme.格線, THIN
+
+
 def format_mmss(seconds: int) -> str:
     """秒數格式化為 mm:ss（超過 60 分鐘時分鐘可超過 59）。"""
     seconds = max(0, int(seconds))
@@ -186,7 +196,7 @@ class BoardView(ctk.CTkFrame):
         for n in range(1, 10):
             r, c = divmod(n - 1, 3)
             btn = ctk.CTkButton(
-                pad, text=str(n), width=64, height=52, corner_radius=12,
+                pad, text=str(n), width=64, height=52, corner_radius=self.theme.圓角,
                 font=ctk.CTkFont(size=22, weight="bold"),
                 fg_color=self.theme.按鈕, hover_color=self.theme.按鈕懸停,
                 text_color=self.theme.按鈕文字,
@@ -196,7 +206,7 @@ class BoardView(ctk.CTkFrame):
             self._num_buttons[n] = btn
 
         # 資訊面板：計時 / 錯誤次數 / 剩餘提示
-        panel = ctk.CTkFrame(right, fg_color=self.theme.面板, corner_radius=12)
+        panel = ctk.CTkFrame(right, fg_color=self.theme.面板, corner_radius=self.theme.圓角)
         panel.pack(fill="x")
         self.time_var = ctk.StringVar(value=format_mmss(session.elapsed_sec))
         self.error_var = ctk.StringVar(value=str(session.mistakes))
@@ -223,7 +233,7 @@ class BoardView(ctk.CTkFrame):
 
         def 操作按鈕(text: str, command) -> ctk.CTkButton:
             return ctk.CTkButton(
-                btns, text=text, width=180, height=40, corner_radius=12,
+                btns, text=text, width=180, height=40, corner_radius=self.theme.圓角,
                 font=ctk.CTkFont(size=15, weight="bold"),
                 fg_color=self.theme.按鈕, hover_color=self.theme.按鈕懸停,
                 text_color=self.theme.按鈕文字,
@@ -261,11 +271,10 @@ class BoardView(ctk.CTkFrame):
     # ---------- 繪製 ----------
 
     def _draw_grid(self) -> None:
-        """畫格線：一般細線 + 每 3 格的宮粗線（顏色讀自色票宮粗線）。"""
+        """畫格線：一般細線 + 每 3 格的宮粗線（顏色與線寬讀自色票 grid_line_spec）。"""
         t = self.theme
         for i in range(10):
-            w = t.宮粗線寬 if i % 3 == 0 else THIN
-            color = t.宮粗線 if i % 3 == 0 else t.格線
+            color, w = grid_line_spec(t, i)
             x = i * CELL
             self.canvas.create_line(x, 0, x, BOARD, fill=color, width=w)
             self.canvas.create_line(0, x, BOARD, x, fill=color, width=w)

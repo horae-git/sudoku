@@ -135,3 +135,68 @@ class Test畫面建構:
         assert "連續完成 2 天" in joined and "累計完成 2 天" in joined
         # 無紀錄的難度顯示「—」
         assert "—" in 文字们
+
+
+class Test主選單接到三個新畫面:
+    """主選單（main_menu.MainMenu）的三個框架按鈕要接到票券 09 的畫面並可建構。"""
+
+    @pytest.fixture()
+    def app(self, monkeypatch, tmp_path):
+        import customtkinter as ctk
+
+        monkeypatch.setenv("SUDOKU_DATA_DIR", str(tmp_path / "user-data"))
+        app = ctk.CTk()
+        app.geometry("960x760")
+        yield app
+        app.destroy()
+
+    def test_主選單建構且有三個入口按鈕(self, app):
+        from sudoku.ui.main_menu import MainMenu
+
+        menu = MainMenu(app)
+        menu.pack(expand=True, fill="both")
+        texts = Test畫面建構._all_texts(menu)
+        joined = "\n".join(texts)
+        assert "🎨 背景主題" in joined  # 主題按鈕在首頁顯眼處
+        assert "🗂️ 遊玩紀錄" in joined and "📊 生涯總覽" in joined
+        assert "每日挑戰" in joined
+
+    def test_點遊玩紀錄切到HistoryView(self, app):
+        from sudoku.ui.main_menu import MainMenu
+
+        menu = MainMenu(app)
+        menu.pack(expand=True, fill="both")
+        menu._open_history()
+        from sudoku.ui.history_view import HistoryView
+
+        assert isinstance(menu._current, HistoryView)
+
+    def test_點生涯總覽切到StatsView(self, app):
+        from sudoku.ui.main_menu import MainMenu
+
+        menu = MainMenu(app)
+        menu.pack(expand=True, fill="both")
+        menu._open_stats()
+        from sudoku.ui.stats_view import StatsView
+
+        assert isinstance(menu._current, StatsView)
+
+    def test_點背景主題切到ThemePickerView(self, app):
+        from sudoku.ui.main_menu import MainMenu
+
+        menu = MainMenu(app)
+        menu.pack(expand=True, fill="both")
+        menu._open_theme()
+        assert isinstance(menu._current, ThemePickerView)
+
+    def test_切換主題後主選單依新色票重建且持久化(self, app):
+        from sudoku.ui.main_menu import MainMenu
+
+        menu = MainMenu(app)
+        menu.pack(expand=True, fill="both")
+        menu._open_theme()
+        picker = menu._current
+        picker._pick("dark")  # 模擬點選深色卡
+        # 持久化 + 主選單已重建為新 MainMenu（非 picker）
+        assert get_current_theme_name() == "dark"
+        assert isinstance(menu._current, type(None)) or menu._current is None or isinstance(menu._current, MainMenu)

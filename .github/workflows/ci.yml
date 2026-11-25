@@ -10,9 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: 安裝 GUI 測試相依套件
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk-dev xvfb
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - run: uv sync --group dev
       # 日常門檻：跑快速測試（排除 slow 壓力測試）；slow標記見 pyproject markers
-      - run: uv run pytest -m "not slow" -q
+      - name: 執行測試
+        run: xvfb-run -a uv run pytest -m "not slow" -q
